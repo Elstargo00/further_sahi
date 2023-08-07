@@ -73,6 +73,27 @@ class CocoAnnotation:
     """
 
     @classmethod
+    def from_yolo_bbox(cls, img_size, bbox, category_id, category_name, image_id=None, iscrowd=0):
+        """ FOR THE GEEKTER GOOD """
+        """ Create CocoAnnotation object using yolo bbox """
+
+        xc, yc, width, height = bbox
+        img_height, img_width = img_size
+        width = width * img_width
+        height = height * img_height
+        xmin = xc * img_width - width / 2
+        ymin = yc * img_height - height / 2
+        bbox = [xmin, ymin, width, height]
+
+        return cls(
+            bbox = bbox,
+            category_id = category_id,
+            category_name = category_name,
+            image_id = image_id,
+            iscrowd = iscrowd,
+        )
+
+    @classmethod
     def from_coco_segmentation(cls, segmentation, category_id, category_name, iscrowd=0):
         """
         Creates CocoAnnotation object using coco segmentation.

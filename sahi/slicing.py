@@ -501,6 +501,140 @@ def slice_coco(
     return coco_dict, save_path
 
 
+
+def slice_yolo2coco(
+    coco_annotation_dict: Dict,
+    image_dir: str,
+    output_coco_annotation_file_name: str,
+    output_dir: Optional[str] = None,
+    ignore_negative_samples: bool = False,
+    slice_height: int = 512,
+    slice_width: int = 512,
+    overlap_height_ratio: float = 0.2,
+    overlap_width_ratio: float = 0.2,
+    min_area_ratio: float = 0.1,
+    out_ext: Optional[str] = None,
+    verbose: bool = False,
+) -> List[Union[Dict, str]]:
+    """ FOR THE GEEKTER GOOD """
+
+    sliced_coco_images: List = []
+
+    for file in tqdm(os.listdir(image_dir)):
+        if file.endswith(".png"):
+            image_path = Path(os.path.join(image_dir, file))
+            image_id = image_path.stem
+        
+            try:
+                slice_image_result = slice_image(
+                    image = str(image_path),
+                    coco_annotation_list = coco_annotation_dict[image_id],
+                    output_file_name = image_id,
+                    output_dir = output_dir,
+                    slice_height = slice_height,
+                    slice_width = slice_width,
+                    overlap_height_ratio = overlap_height_ratio,
+                    overlap_width_ratio = overlap_width_ratio,
+                    min_area_ratio = min_area_ratio,
+                    out_ext = out_ext,
+                    verbose = verbose,
+                )
+                sliced_coco_images.extend(slice_image_result.coco_images)
+
+            except TopologicalError:
+                logger.warning(f"Invalid annotation found, skipping this image: {image_path}")
+
+    # create and save coco dict
+    coco_dict = create_coco_dict(
+        sliced_coco_images, coco_annotation_dict["categories"], ignore_negative_samples=ignore_negative_samples
+    )
+    save_path = ""
+    if output_coco_annotation_file_name and output_dir:
+        save_path = Path(output_dir) / (output_coco_annotation_file_name + "_coco.json")
+        save_json(coco_dict, save_path)
+
+    return coco_dict, save_path
+
+
+
+
+
+def slice_yolo2yolo(
+    coco_annotation_dict: Dict,
+    image_dir: str,
+    output_coco_annotation_file_name: str,
+    output_dir: Optional[str] = None,
+    ignore_negative_samples: bool = False,
+    slice_height: int = 512,
+    slice_width: int = 512,
+    overlap_height_ratio: float = 0.2,
+    overlap_width_ratio: float = 0.2,
+    min_area_ratio: float = 0.1,
+    out_ext: Optional[str] = None,
+    verbose: bool = False,
+) -> List[Union[Dict, str]]:
+    """ FOR THE GEEKTER GOOD """
+
+    sliced_coco_images: List = []
+
+    for file in tqdm(os.listdir(image_dir)):
+        if file.endswith(".png"):
+            image_path = Path(os.path.join(image_dir, file))
+            image_id = image_path.stem
+        
+            try:
+                slice_image_result = slice_image(
+                    image = str(image_path),
+                    coco_annotation_list = coco_annotation_dict[image_id],
+                    output_file_name = image_id,
+                    output_dir = output_dir,
+                    slice_height = slice_height,
+                    slice_width = slice_width,
+                    overlap_height_ratio = overlap_height_ratio,
+                    overlap_width_ratio = overlap_width_ratio,
+                    min_area_ratio = min_area_ratio,
+                    out_ext = out_ext,
+                    verbose = verbose,
+                )
+                sliced_coco_images.extend(slice_image_result.coco_images)
+
+            except TopologicalError:
+                logger.warning(f"Invalid annotation found, skipping this image: {image_path}")
+
+    # create and save coco dict
+    coco_dict = create_coco_dict(
+        sliced_coco_images, coco_annotation_dict["categories"], ignore_negative_samples=ignore_negative_samples
+    )
+
+    for details in coco_dict["images"]:
+        image_id = details["id"]
+        filename = details["file_name"]
+        filename = filename.replace(".jpg", ".txt")
+        img_width = details["width"]
+        img_height = details["height"]
+
+        with open(os.path.join(output_dir, filename), "w") as file:
+
+            for details_ in coco_dict["annotations"]:
+                if image_id == details_["image_id"]:
+                    category_id = details_["category_id"]
+                    bbox = details_["bbox"]
+                    x, y, width, height = bbox
+                    xc = (x + width / 2) / img_width
+                    yc = (y + height / 2) / img_height
+                    width = width / img_width
+                    height = height / img_height
+                    bbox = [round(xc, 6), round(yc, 6), round(width, 6), round(height, 6)]
+                    # print("filename:", filename)
+                    # print("category_id:", category_id)
+                    # print("bbox:", bbox)
+                    content = str(category_id)+' '+ ' '.join([str(b) for b in bbox])+'\n'
+                    file.write(content) 
+
+    return coco_dict
+
+
+
 def calc_ratio_and_slice(orientation, slide=1, ratio=0.1):
     """
     According to image resolution calculation overlap params
